@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2018 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ import org.apache.jasper.EmbeddedServletOptions;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.thymeleaf.spring5.templateresolver.SpringResourceTemplateResolver;
 
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -56,6 +55,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -70,9 +70,6 @@ import static org.mockito.Mockito.verify;
  * @author Vladimir Tsanev
  */
 public class LocalDevToolsAutoConfigurationTests {
-
-	@Rule
-	public ExpectedException thrown = ExpectedException.none();
 
 	@Rule
 	public MockRestarter mockRestarter = new MockRestarter();
@@ -168,8 +165,8 @@ public class LocalDevToolsAutoConfigurationTests {
 		Map<String, Object> properties = new HashMap<>();
 		properties.put("spring.devtools.livereload.enabled", false);
 		this.context = initializeAndRun(Config.class, properties);
-		this.thrown.expect(NoSuchBeanDefinitionException.class);
-		this.context.getBean(OptionalLiveReloadServer.class);
+		assertThatExceptionOfType(NoSuchBeanDefinitionException.class)
+				.isThrownBy(() -> this.context.getBean(OptionalLiveReloadServer.class));
 	}
 
 	@Test
@@ -203,8 +200,8 @@ public class LocalDevToolsAutoConfigurationTests {
 		Map<String, Object> properties = new HashMap<>();
 		properties.put("spring.devtools.restart.enabled", false);
 		this.context = initializeAndRun(Config.class, properties);
-		this.thrown.expect(NoSuchBeanDefinitionException.class);
-		this.context.getBean(ClassPathFileSystemWatcher.class);
+		assertThatExceptionOfType(NoSuchBeanDefinitionException.class)
+				.isThrownBy(() -> this.context.getBean(ClassPathFileSystemWatcher.class));
 	}
 
 	@Test
@@ -274,14 +271,14 @@ public class LocalDevToolsAutoConfigurationTests {
 		return properties;
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	@Import({ ServletWebServerFactoryAutoConfiguration.class,
 			LocalDevToolsAutoConfiguration.class, ThymeleafAutoConfiguration.class })
 	public static class Config {
 
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	@ImportAutoConfiguration({ ServletWebServerFactoryAutoConfiguration.class,
 			LocalDevToolsAutoConfiguration.class, ThymeleafAutoConfiguration.class })
 	public static class ConfigWithMockLiveReload {
@@ -293,14 +290,14 @@ public class LocalDevToolsAutoConfigurationTests {
 
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	@Import({ ServletWebServerFactoryAutoConfiguration.class,
 			LocalDevToolsAutoConfiguration.class, ResourceProperties.class })
 	public static class WebResourcesConfig {
 
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	public static class SessionRedisTemplateConfig {
 
 		@Bean

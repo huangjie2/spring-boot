@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2018 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package org.springframework.boot.actuate.autoconfigure.web.mappings;
 
-import java.util.Collection;
-import java.util.Collections;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.actuate.autoconfigure.endpoint.condition.ConditionalOnEnabledEndpoint;
+import org.springframework.boot.actuate.autoconfigure.endpoint.condition.ConditionalOnExposedEndpoint;
 import org.springframework.boot.actuate.web.mappings.MappingDescriptionProvider;
 import org.springframework.boot.actuate.web.mappings.MappingsEndpoint;
 import org.springframework.boot.actuate.web.mappings.reactive.DispatcherHandlersMappingDescriptionProvider;
@@ -44,19 +44,20 @@ import org.springframework.web.servlet.DispatcherServlet;
  * @author Andy Wilkinson
  * @since 2.0.0
  */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 public class MappingsEndpointAutoConfiguration {
 
 	@Bean
 	@ConditionalOnEnabledEndpoint
+	@ConditionalOnExposedEndpoint
 	public MappingsEndpoint mappingsEndpoint(ApplicationContext applicationContext,
-			ObjectProvider<Collection<MappingDescriptionProvider>> descriptionProviders) {
+			ObjectProvider<MappingDescriptionProvider> descriptionProviders) {
 		return new MappingsEndpoint(
-				descriptionProviders.getIfAvailable(Collections::emptyList),
+				descriptionProviders.orderedStream().collect(Collectors.toList()),
 				applicationContext);
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnWebApplication(type = Type.SERVLET)
 	static class ServletWebConfiguration {
 
@@ -70,7 +71,7 @@ public class MappingsEndpointAutoConfiguration {
 			return new FiltersMappingDescriptionProvider();
 		}
 
-		@Configuration
+		@Configuration(proxyBeanMethods = false)
 		@ConditionalOnClass(DispatcherServlet.class)
 		@ConditionalOnBean(DispatcherServlet.class)
 		static class SpringMvcConfiguration {
@@ -84,7 +85,7 @@ public class MappingsEndpointAutoConfiguration {
 
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnWebApplication(type = Type.REACTIVE)
 	@ConditionalOnClass(DispatcherHandler.class)
 	@ConditionalOnBean(DispatcherHandler.class)

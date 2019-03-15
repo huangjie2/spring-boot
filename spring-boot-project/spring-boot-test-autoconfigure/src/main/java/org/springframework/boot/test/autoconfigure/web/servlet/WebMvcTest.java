@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2018 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -138,14 +138,6 @@ public @interface WebMvcTest {
 	 * @return exclude filters to apply
 	 */
 	Filter[] excludeFilters() default {};
-
-	/**
-	 * If Spring Security's {@link MockMvc} support should be auto-configured when it is
-	 * on the classpath. Defaults to {@code true}.
-	 * @return if Spring Security's MockMvc support is auto-configured
-	 */
-	@AliasFor(annotation = AutoConfigureMockMvc.class)
-	boolean secure() default true;
 
 	/**
 	 * Auto-configuration exclusions that should be applied for this test.

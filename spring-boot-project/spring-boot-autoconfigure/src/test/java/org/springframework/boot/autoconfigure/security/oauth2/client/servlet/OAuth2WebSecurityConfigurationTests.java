@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2018 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -165,14 +165,12 @@ public class OAuth2WebSecurityConfigurationTests {
 				});
 	}
 
-	@SuppressWarnings("unchecked")
 	private List<Filter> getFilters(AssertableApplicationContext context,
 			Class<? extends Filter> filter) {
 		FilterChainProxy filterChain = (FilterChainProxy) context
 				.getBean(BeanIds.SPRING_SECURITY_FILTER_CHAIN);
 		List<SecurityFilterChain> filterChains = filterChain.getFilterChains();
-		List<Filter> filters = (List<Filter>) ReflectionTestUtils
-				.getField(filterChains.get(0), "filters");
+		List<Filter> filters = filterChains.get(0).getFilters();
 		return filters.stream().filter(filter::isInstance).collect(Collectors.toList());
 	}
 
@@ -202,7 +200,7 @@ public class OAuth2WebSecurityConfigurationTests {
 		return result;
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	@EnableWebSecurity
 	protected static class TestConfig {
 
@@ -213,7 +211,7 @@ public class OAuth2WebSecurityConfigurationTests {
 
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	@Import(TestConfig.class)
 	static class ClientRegistrationRepositoryConfiguration {
 
@@ -241,13 +239,13 @@ public class OAuth2WebSecurityConfigurationTests {
 
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	@Import(ClientRegistrationRepositoryConfiguration.class)
 	static class TestWebSecurityConfigurerConfig extends WebSecurityConfigurerAdapter {
 
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	@Import(ClientRegistrationRepositoryConfiguration.class)
 	static class OAuth2AuthorizedClientServiceConfiguration {
 
@@ -260,7 +258,7 @@ public class OAuth2WebSecurityConfigurationTests {
 
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	@Import(ClientRegistrationRepositoryConfiguration.class)
 	static class OAuth2AuthorizedClientRepositoryConfiguration {
 

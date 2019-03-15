@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2018 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,9 @@ public class NoSuchMethodFailureAnalyzerTests {
 		FailureAnalysis analysis = new NoSuchMethodFailureAnalyzer().analyze(failure);
 		assertThat(analysis).isNotNull();
 		assertThat(analysis.getDescription())
-				.contains("the method javax.servlet.ServletContext.addServlet"
+				.contains(NoSuchMethodFailureAnalyzerTests.class.getName()
+						+ ".createFailure(")
+				.contains("javax.servlet.ServletContext.addServlet"
 						+ "(Ljava/lang/String;Ljavax/servlet/Servlet;)"
 						+ "Ljavax/servlet/ServletRegistration$Dynamic;")
 				.contains("class, javax.servlet.ServletContext,");

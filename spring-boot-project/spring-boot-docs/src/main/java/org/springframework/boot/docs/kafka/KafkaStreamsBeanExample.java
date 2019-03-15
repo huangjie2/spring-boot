@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2018 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,14 +35,14 @@ import org.springframework.kafka.support.serializer.JsonSerde;
 public class KafkaStreamsBeanExample {
 
 	// tag::configuration[]
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	@EnableKafkaStreams
 	static class KafkaStreamsExampleConfiguration {
 
 		@Bean
 		public KStream<Integer, String> kStream(StreamsBuilder streamsBuilder) {
 			KStream<Integer, String> stream = streamsBuilder.stream("ks1In");
-			stream.map((k, v) -> new KeyValue(k, v.toUpperCase())).to("ks1Out",
+			stream.map((k, v) -> new KeyValue<>(k, v.toUpperCase())).to("ks1Out",
 					Produced.with(Serdes.Integer(), new JsonSerde<>()));
 			return stream;
 		}

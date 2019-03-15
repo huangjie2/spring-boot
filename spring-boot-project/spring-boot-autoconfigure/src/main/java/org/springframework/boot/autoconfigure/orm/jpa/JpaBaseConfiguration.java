@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2018 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.springframework.boot.autoconfigure.orm.jpa;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -40,6 +39,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type;
 import org.springframework.boot.autoconfigure.domain.EntityScanPackages;
 import org.springframework.boot.autoconfigure.transaction.TransactionManagerCustomizers;
+import org.springframework.boot.autoconfigure.web.servlet.ConditionalOnMissingFilterBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
 import org.springframework.context.annotation.Bean;
@@ -70,6 +70,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * @author Kazuki Shimizu
  * @author Eddú Meléndez
  */
+@Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(JpaProperties.class)
 @Import(DataSourceInitializedPublisher.Registrar.class)
 public abstract class JpaBaseConfiguration implements BeanFactoryAware {
@@ -80,27 +81,22 @@ public abstract class JpaBaseConfiguration implements BeanFactoryAware {
 
 	private final JtaTransactionManager jtaTransactionManager;
 
-	private final TransactionManagerCustomizers transactionManagerCustomizers;
-
 	private ConfigurableListableBeanFactory beanFactory;
 
 	protected JpaBaseConfiguration(DataSource dataSource, JpaProperties properties,
-			ObjectProvider<JtaTransactionManager> jtaTransactionManager,
-			ObjectProvider<TransactionManagerCustomizers> transactionManagerCustomizers) {
+			ObjectProvider<JtaTransactionManager> jtaTransactionManager) {
 		this.dataSource = dataSource;
 		this.properties = properties;
 		this.jtaTransactionManager = jtaTransactionManager.getIfAvailable();
-		this.transactionManagerCustomizers = transactionManagerCustomizers
-				.getIfAvailable();
 	}
 
 	@Bean
 	@ConditionalOnMissingBean
-	public PlatformTransactionManager transactionManager() {
+	public PlatformTransactionManager transactionManager(
+			ObjectProvider<TransactionManagerCustomizers> transactionManagerCustomizers) {
 		JpaTransactionManager transactionManager = new JpaTransactionManager();
-		if (this.transactionManagerCustomizers != null) {
-			this.transactionManagerCustomizers.customize(transactionManager);
-		}
+		transactionManagerCustomizers
+				.ifAvailable((customizers) -> customizers.customize(transactionManager));
 		return transactionManager;
 	}
 
@@ -120,14 +116,12 @@ public abstract class JpaBaseConfiguration implements BeanFactoryAware {
 	public EntityManagerFactoryBuilder entityManagerFactoryBuilder(
 			JpaVendorAdapter jpaVendorAdapter,
 			ObjectProvider<PersistenceUnitManager> persistenceUnitManager,
-			ObjectProvider<List<EntityManagerFactoryBuilderCustomizer>> customizers) {
+			ObjectProvider<EntityManagerFactoryBuilderCustomizer> customizers) {
 		EntityManagerFactoryBuilder builder = new EntityManagerFactoryBuilder(
 				jpaVendorAdapter, this.properties.getProperties(),
 				persistenceUnitManager.getIfAvailable());
-		for (EntityManagerFactoryBuilderCustomizer customizer : customizers
-				.getIfAvailable(Collections::emptyList)) {
-			customizer.customize(builder);
-		}
+		customizers.orderedStream()
+				.forEach((customizer) -> customizer.customize(builder));
 		return builder;
 	}
 
@@ -208,44 +202,45 @@ public abstract class JpaBaseConfiguration implements BeanFactoryAware {
 		this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnWebApplication(type = Type.SERVLET)
 	@ConditionalOnClass(WebMvcConfigurer.class)
 	@ConditionalOnMissingBean({ OpenEntityManagerInViewInterceptor.class,
 			OpenEntityManagerInViewFilter.class })
+	@ConditionalOnMissingFilterBean(OpenEntityManagerInViewFilter.class)
 	@ConditionalOnProperty(prefix = "spring.jpa", name = "open-in-view", havingValue = "true", matchIfMissing = true)
 	protected static class JpaWebConfiguration {
 
-		// Defined as a nested config to ensure WebMvcConfigurerAdapter is not read when
-		// not on the classpath
-		@Configuration
-		protected static class JpaWebMvcConfiguration implements WebMvcConfigurer {
+		private static final Log logger = LogFactory.getLog(JpaWebConfiguration.class);
 
-			private static final Log logger = LogFactory
-					.getLog(JpaWebMvcConfiguration.class);
+		private final JpaProperties jpaProperties;
 
-			private final JpaProperties jpaProperties;
+		protected JpaWebConfiguration(JpaProperties jpaProperties) {
+			this.jpaProperties = jpaProperties;
+		}
 
-			protected JpaWebMvcConfiguration(JpaProperties jpaProperties) {
-				this.jpaProperties = jpaProperties;
+		@Bean
+		public OpenEntityManagerInViewInterceptor openEntityManagerInViewInterceptor() {
+			if (this.jpaProperties.getOpenInView() == null) {
+				logger.warn("spring.jpa.open-in-view is enabled by default. "
+						+ "Therefore, database queries may be performed during view "
+						+ "rendering. Explicitly configure "
+						+ "spring.jpa.open-in-view to disable this warning");
 			}
+			return new OpenEntityManagerInViewInterceptor();
+		}
 
-			@Bean
-			public OpenEntityManagerInViewInterceptor openEntityManagerInViewInterceptor() {
-				if (this.jpaProperties.getOpenInView() == null) {
-					logger.warn("spring.jpa.open-in-view is enabled by default. "
-							+ "Therefore, database queries may be performed during view "
-							+ "rendering. Explicitly configure "
-							+ "spring.jpa.open-in-view to disable this warning");
+		@Bean
+		public WebMvcConfigurer openEntityManagerInViewInterceptorConfigurer(
+				OpenEntityManagerInViewInterceptor interceptor) {
+			return new WebMvcConfigurer() {
+
+				@Override
+				public void addInterceptors(InterceptorRegistry registry) {
+					registry.addWebRequestInterceptor(interceptor);
 				}
-				return new OpenEntityManagerInViewInterceptor();
-			}
 
-			@Override
-			public void addInterceptors(InterceptorRegistry registry) {
-				registry.addWebRequestInterceptor(openEntityManagerInViewInterceptor());
-			}
-
+			};
 		}
 
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2018 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.springframework.boot.autoconfigure.web.reactive.function.client;
 
 import java.net.URI;
+import java.time.Duration;
 
 import org.junit.Test;
 import reactor.core.publisher.Mono;
@@ -109,8 +110,10 @@ public class WebClientAutoConfigurationTests {
 					secondBuilder.clientConnector(secondConnector)
 							.baseUrl("http://second.example.org");
 					assertThat(firstBuilder).isNotEqualTo(secondBuilder);
-					firstBuilder.build().get().uri("/foo").exchange().block();
-					secondBuilder.build().get().uri("/foo").exchange().block();
+					firstBuilder.build().get().uri("/foo").exchange()
+							.block(Duration.ofSeconds(30));
+					secondBuilder.build().get().uri("/foo").exchange()
+							.block(Duration.ofSeconds(30));
 					verify(firstConnector).connect(eq(HttpMethod.GET),
 							eq(URI.create("http://first.example.org/foo")), any());
 					verify(secondConnector).connect(eq(HttpMethod.GET),
@@ -130,7 +133,7 @@ public class WebClientAutoConfigurationTests {
 				});
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	static class CodecConfiguration {
 
 		@Bean
@@ -140,7 +143,7 @@ public class WebClientAutoConfigurationTests {
 
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	static class WebClientCustomizerConfig {
 
 		@Bean
@@ -150,7 +153,7 @@ public class WebClientAutoConfigurationTests {
 
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	static class CustomWebClientBuilderConfig {
 
 		@Bean

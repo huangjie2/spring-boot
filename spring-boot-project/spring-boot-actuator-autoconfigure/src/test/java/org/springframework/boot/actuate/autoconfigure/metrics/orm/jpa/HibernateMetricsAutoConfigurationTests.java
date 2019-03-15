@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2018 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
+import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -53,6 +54,7 @@ import static org.mockito.Mockito.mock;
  * Tests for {@link HibernateMetricsAutoConfiguration}.
  *
  * @author Rui Figueira
+ * @author Stephane Nicoll
  */
 public class HibernateMetricsAutoConfigurationTests {
 
@@ -137,7 +139,20 @@ public class HibernateMetricsAutoConfigurationTests {
 				});
 	}
 
-	@Configuration
+	@Test
+	public void entityManagerFactoryInstrumentationIsDisabledIfHibernateIsNotAvailable() {
+		this.contextRunner.withClassLoader(new FilteredClassLoader(SessionFactory.class))
+				.withUserConfiguration(
+						NonHibernateEntityManagerFactoryConfiguration.class)
+				.run((context) -> {
+					assertThat(context)
+							.doesNotHaveBean(HibernateMetricsAutoConfiguration.class);
+					MeterRegistry registry = context.getBean(MeterRegistry.class);
+					assertThat(registry.find("hibernate.statements").meter()).isNull();
+				});
+	}
+
+	@Configuration(proxyBeanMethods = false)
 	static class BaseConfiguration {
 
 		@Bean
@@ -156,7 +171,7 @@ public class HibernateMetricsAutoConfigurationTests {
 
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	static class TwoEntityManagerFactoriesConfiguration {
 
 		private static final Class<?>[] PACKAGE_CLASSES = new Class<?>[] {
@@ -184,7 +199,7 @@ public class HibernateMetricsAutoConfigurationTests {
 
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	static class NonHibernateEntityManagerFactoryConfiguration {
 
 		@Bean

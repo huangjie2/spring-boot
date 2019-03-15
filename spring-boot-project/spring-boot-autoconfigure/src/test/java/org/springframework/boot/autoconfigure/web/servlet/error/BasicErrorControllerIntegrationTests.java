@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2018 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -96,25 +95,24 @@ public class BasicErrorControllerIntegrationTests {
 
 	@Test
 	public void testErrorForMachineClientTraceParamTrue() {
-		errorForMachineClientOnTraceParam(() -> createUrl("?trace=true"), true);
+		errorForMachineClientOnTraceParam("?trace=true", true);
 	}
 
 	@Test
 	public void testErrorForMachineClientTraceParamFalse() {
-		errorForMachineClientOnTraceParam(() -> createUrl("?trace=false"), false);
+		errorForMachineClientOnTraceParam("?trace=false", false);
 	}
 
 	@Test
 	public void testErrorForMachineClientTraceParamAbsent() {
-		errorForMachineClientOnTraceParam(() -> createUrl(""), false);
+		errorForMachineClientOnTraceParam("", false);
 	}
 
 	@SuppressWarnings("rawtypes")
-	private void errorForMachineClientOnTraceParam(Supplier<String> url,
-			boolean expectedTrace) {
+	private void errorForMachineClientOnTraceParam(String path, boolean expectedTrace) {
 		load("--server.error.include-exception=true",
 				"--server.error.include-stacktrace=on-trace-param");
-		ResponseEntity<Map> entity = new TestRestTemplate().getForEntity(url.get(),
+		ResponseEntity<Map> entity = new TestRestTemplate().getForEntity(createUrl(path),
 				Map.class);
 		assertErrorAttributes(entity.getBody(), "500", "Internal Server Error",
 				IllegalStateException.class, "Expected!", "/");
@@ -260,7 +258,7 @@ public class BasicErrorControllerIntegrationTests {
 
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	@MinimalWebConfiguration
 	@ImportAutoConfiguration(FreeMarkerAutoConfiguration.class)
 	public static class TestConfiguration {

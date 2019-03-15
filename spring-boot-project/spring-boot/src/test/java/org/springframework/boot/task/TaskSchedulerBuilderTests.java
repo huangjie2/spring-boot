@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2018 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,16 @@
 
 package org.springframework.boot.task;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Set;
 
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -38,22 +38,26 @@ import static org.mockito.Mockito.verifyZeroInteractions;
  */
 public class TaskSchedulerBuilderTests {
 
-	@Rule
-	public ExpectedException thrown = ExpectedException.none();
-
 	private TaskSchedulerBuilder builder = new TaskSchedulerBuilder();
-
-	@Test
-	public void createWhenCustomizersAreNullShouldThrowException() {
-		this.thrown.expect(IllegalArgumentException.class);
-		this.thrown.expectMessage("TaskSchedulerCustomizers must not be null");
-		new TaskSchedulerBuilder((TaskSchedulerCustomizer[]) null);
-	}
 
 	@Test
 	public void poolSettingsShouldApply() {
 		ThreadPoolTaskScheduler scheduler = this.builder.poolSize(4).build();
 		assertThat(scheduler.getPoolSize()).isEqualTo(4);
+	}
+
+	@Test
+	public void awaitTerminationShouldApply() {
+		ThreadPoolTaskScheduler executor = this.builder.awaitTermination(true).build();
+		assertThat(executor)
+				.hasFieldOrPropertyWithValue("waitForTasksToCompleteOnShutdown", true);
+	}
+
+	@Test
+	public void awaitTerminationPeriodShouldApply() {
+		ThreadPoolTaskScheduler executor = this.builder
+				.awaitTerminationPeriod(Duration.ofMinutes(1)).build();
+		assertThat(executor).hasFieldOrPropertyWithValue("awaitTerminationSeconds", 60);
 	}
 
 	@Test
@@ -65,16 +69,17 @@ public class TaskSchedulerBuilderTests {
 
 	@Test
 	public void customizersWhenCustomizersAreNullShouldThrowException() {
-		this.thrown.expect(IllegalArgumentException.class);
-		this.thrown.expectMessage("TaskSchedulerCustomizers must not be null");
-		this.builder.customizers((TaskSchedulerCustomizer[]) null);
+		assertThatIllegalArgumentException()
+				.isThrownBy(
+						() -> this.builder.customizers((TaskSchedulerCustomizer[]) null))
+				.withMessageContaining("Customizers must not be null");
 	}
 
 	@Test
 	public void customizersCollectionWhenCustomizersAreNullShouldThrowException() {
-		this.thrown.expect(IllegalArgumentException.class);
-		this.thrown.expectMessage("TaskSchedulerCustomizers must not be null");
-		this.builder.customizers((Set<TaskSchedulerCustomizer>) null);
+		assertThatIllegalArgumentException().isThrownBy(
+				() -> this.builder.customizers((Set<TaskSchedulerCustomizer>) null))
+				.withMessageContaining("Customizers must not be null");
 	}
 
 	@Test
@@ -107,16 +112,18 @@ public class TaskSchedulerBuilderTests {
 
 	@Test
 	public void additionalCustomizersWhenCustomizersAreNullShouldThrowException() {
-		this.thrown.expect(IllegalArgumentException.class);
-		this.thrown.expectMessage("TaskSchedulerCustomizers must not be null");
-		this.builder.additionalCustomizers((TaskSchedulerCustomizer[]) null);
+		assertThatIllegalArgumentException()
+				.isThrownBy(() -> this.builder
+						.additionalCustomizers((TaskSchedulerCustomizer[]) null))
+				.withMessageContaining("Customizers must not be null");
 	}
 
 	@Test
 	public void additionalCustomizersCollectionWhenCustomizersAreNullShouldThrowException() {
-		this.thrown.expect(IllegalArgumentException.class);
-		this.thrown.expectMessage("TaskSchedulerCustomizers must not be null");
-		this.builder.additionalCustomizers((Set<TaskSchedulerCustomizer>) null);
+		assertThatIllegalArgumentException()
+				.isThrownBy(() -> this.builder
+						.additionalCustomizers((Set<TaskSchedulerCustomizer>) null))
+				.withMessageContaining("Customizers must not be null");
 	}
 
 	@Test

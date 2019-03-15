@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2018 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.sql.Connection;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import javax.sql.DataSource;
 
@@ -93,7 +94,8 @@ public class FlywayAutoConfigurationTests {
 	@Test
 	public void createDataSourceWithUser() {
 		this.contextRunner.withUserConfiguration(EmbeddedDataSourceConfiguration.class)
-				.withPropertyValues("spring.datasource.url:jdbc:hsqldb:mem:normal",
+				.withPropertyValues(
+						"spring.datasource.url:jdbc:hsqldb:mem:" + UUID.randomUUID(),
 						"spring.flyway.user:sa")
 				.run((context) -> {
 					assertThat(context).hasSingleBean(Flyway.class);
@@ -363,7 +365,22 @@ public class FlywayAutoConfigurationTests {
 				});
 	}
 
-	@Configuration
+	@Test
+	public void configurationCustomizersAreConfiguredAndOrdered() {
+		this.contextRunner.withUserConfiguration(EmbeddedDataSourceConfiguration.class,
+				ConfigurationCustomizerConfiguration.class).run((context) -> {
+					assertThat(context).hasSingleBean(Flyway.class);
+					Flyway flyway = context.getBean(Flyway.class);
+					assertThat(flyway.getConfiguration().getConnectRetries())
+							.isEqualTo(5);
+					assertThat(flyway.getConfiguration().isIgnoreMissingMigrations())
+							.isTrue();
+					assertThat(flyway.getConfiguration().isIgnorePendingMigrations())
+							.isTrue();
+				});
+	}
+
+	@Configuration(proxyBeanMethods = false)
 	protected static class FlywayDataSourceConfiguration {
 
 		@Bean
@@ -382,7 +399,7 @@ public class FlywayAutoConfigurationTests {
 
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	protected static class CustomFlywayMigrationInitializer {
 
 		@Bean
@@ -395,7 +412,7 @@ public class FlywayAutoConfigurationTests {
 
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	protected static class CustomFlywayWithJpaConfiguration {
 
 		private final DataSource dataSource;
@@ -437,7 +454,7 @@ public class FlywayAutoConfigurationTests {
 
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	static class CallbackConfiguration {
 
 		@Bean
@@ -461,7 +478,7 @@ public class FlywayAutoConfigurationTests {
 
 	}
 
-	@Configuration
+	@Configuration(proxyBeanMethods = false)
 	static class LegacyCallbackConfiguration {
 
 		@Bean
@@ -474,6 +491,25 @@ public class FlywayAutoConfigurationTests {
 		@Order(0)
 		public FlywayCallback legacyCallbackTwo() {
 			return mock(FlywayCallback.class);
+		}
+
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	static class ConfigurationCustomizerConfiguration {
+
+		@Bean
+		@Order(1)
+		public FlywayConfigurationCustomizer customizerOne() {
+			return (configuration) -> configuration.connectRetries(5)
+					.ignorePendingMigrations(true);
+		}
+
+		@Bean
+		@Order(0)
+		public FlywayConfigurationCustomizer customizerTwo() {
+			return (configuration) -> configuration.connectRetries(10)
+					.ignoreMissingMigrations(true);
 		}
 
 	}
